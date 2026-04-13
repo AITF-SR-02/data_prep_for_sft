@@ -34,7 +34,7 @@ PROGRESS_FILE = os.path.join(OUTPUT_DIR, ".progress.json")
 # ============================================================
 # P0 CONFIG — Master Directive (Bagian 4.7)
 # ============================================================
-AI_NAME = "Bu Guru"  # Ubah nama di sini saja jika perlu ganti
+AI_NAME = "Ahli Konten Belajar"  # Ubah nama di sini saja jika perlu ganti
 
 BANNED_OPENING_WORDS = [
     "Nah,", "Mari kita lihat,", "Sekarang Ibu akan",
