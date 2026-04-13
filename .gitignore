@@ -1,0 +1,27 @@
+# Environments
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Generated SFT Data & Logs (WARNING: Do NOT push production outputs to git)
+data/*
+!data/.gitkeep
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db

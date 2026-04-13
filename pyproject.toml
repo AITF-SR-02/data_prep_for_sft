@@ -1,0 +1,12 @@
+[project]
+name = "data-prep-for-sft"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.13"
+dependencies = [
+    "openai>=2.31.0",
+    "python-dotenv>=1.2.2",
+    "rapidfuzz>=3.14.5",
+    "scikit-learn>=1.8.0",
+    "tqdm>=4.67.3",
+]
