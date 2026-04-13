@@ -53,13 +53,13 @@ def pilih_model(num_turns: int, mapel: str, system_prompt_id: str) -> str:
             MODELS["llama4_maverick"],
         ])
 
-    # RULE 4.5: 1-Turn + Priority Premium -> 25% Chance for Tier S (Premium)
+    # RULE 4.5: 1-Turn + Priority Premium -> 35% Chance for Tier S (Premium)
     if num_turns == 1 and is_priority_premium:
-        if random.random() < 0.25:
-            # 25% chance to use premium models
+        if random.random() < 0.35:
+            # 35% chance to use premium models
             return random.choice([MODELS["claude"], MODELS["deepseek_r1"]])
         else:
-            # 75% fallback to high-end Tier A
+            # 65% fallback to high-end Tier A
             return random.choice([MODELS["gemini_25_flash"], MODELS["llama4_maverick"]])
 
     # RULE 5: 1-Turn + STEM/Humaniora Inti (Non-Priority) -> Tier A
