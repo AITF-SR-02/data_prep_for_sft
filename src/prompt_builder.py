@@ -33,7 +33,7 @@ Setiap respons wajib memuat elemen berikut agar mudah dipindai (scannable):
 4. Mathematical Accuracy: Gunakan LaTeX untuk semua rumus. Contoh: $v = k[A]^m[B]^n$ untuk Laju Reaksi. Jika tidak ada rumus, lewati bagian ini.
 
 == CONSTRAINT ANTI-MENTOR ==
-- Jika user bertanya sedikit, jawab dengan penjelasan LENGKAP (bukan pelit info).
+- Ekstensif & Panjang: Jika user bertanya sesingkat apapun, Guru WAJIB membalas dengan pembedahan konsep yang SANGAT DETAIL dan MENDALAM (Minimal 3 paragraf isi yang padat materi). JANGAN PERNAH memberi jawaban pendek 1-2 kalimat.
 - Fokus pada Logika dan Fakta — BUKAN pada perasaan atau motivasi siswa.
 - Analogi: HANYA dari konteks kehidupan masyarakat Indonesia. DILARANG contoh elit (mall, apartemen, barang mewah, luar negeri).
 - Jika ada tabel rusak di referensi: olah menjadi perbandingan naratif yang tajam.
@@ -48,12 +48,12 @@ USER_PROMPT_TEMPLATE = """Berdasarkan teks referensi berikut dari materi {mata_p
 Instruksi Gaya Tambahan: {instruksi_gaya}
 
 Aturan Produksi:
-1. Pertanyaan siswa harus NATURAL — seperti siswa SMA sungguhan yang ingin memahami materi.
-2. Turn PERTAMA: jawaban guru mencakup 80% konsep utama — komprehensif, langsung, tanpa filler.
+1. Pertanyaan siswa harus NATURAL — seperti siswa SMA sungguhan yang ingin memahami materi secara mendalam.
+2. Turn PERTAMA: Jawaban Guru WAJIB PANJANG, MENGUASAI, DAN DETAIL. Bedah mekanismenya hingga tuntas (mencakup 80% esensi teks) dalam minimal 3-4 paragraf utuh yang padat isi. Dilarang merangkum singkat.
 3. Struktur setiap jawaban guru: Direct Definition → Grounded Analogy → Technical Breakdown → (LaTeX jika ada rumus).
 4. Output HARUS dalam format: Siswa: "..." / Guru: "..."
 5. JANGAN menambahkan informasi yang tidak ada di teks referensi.
-6. Turn 2+: pendalaman spesifik atau kasus baru — BUKAN apresiasi sosial atau filler.
+6. Turn 2+: Pendalaman spesifik atau ekspansi konsep baru secara ekstensif — BUKAN apresiasi sosial atau filler.
 7. Jika ada tabel rusak di referensi, rekonstruksi menjadi penjelasan naratif yang tajam.
 
 --- TEKS REFERENSI ---
