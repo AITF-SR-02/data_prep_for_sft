@@ -45,7 +45,14 @@ def pilih_model(num_turns: int, mapel: str, system_prompt_id: str) -> str:
     if num_turns == 3:
         return random.choice([MODELS["gemini_25_flash"], MODELS["gpt4o_mini"]])
 
-    # RULE 4: 2-Turn -> Tier A (3 model alternation)
+    # RULE 4: 2-Turn + Priority Premium -> 35% Chance for Tier S (Premium)
+    if num_turns == 2 and is_priority_premium:
+        if random.random() < 0.35:
+            return random.choice([MODELS["claude"], MODELS["deepseek_r1"]])
+        else:
+            return random.choice([MODELS["gpt4o_mini"], MODELS["gemini_25_flash"], MODELS["llama4_maverick"]])
+
+    # RULE 4.1: 2-Turn (Non-Priority) -> Tier A (3 model alternation)
     if num_turns == 2:
         return random.choice([
             MODELS["gpt4o_mini"],
