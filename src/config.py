@@ -91,25 +91,19 @@ TFIDF_SIMILARITY_THRESHOLD = 0.15
 # MODEL IDS (Bagian 7.2 — OpenRouter April 2026)
 # ============================================================
 MODELS = {
-    # Tier S — Premium
-    "claude": "anthropic/claude-3.7-sonnet",
-    "deepseek_r1": "deepseek/deepseek-r1",
-    # Tier A — Standard
-    "gemini_25_flash": "google/gemini-2.5-flash",
-    "gpt4o_mini": "openai/gpt-4o-mini",
-    "llama4_maverick": "meta-llama/llama-4-maverick",
-    # Tier B — Budget
-    "gemini_20_flash": "google/gemini-2.0-flash-001",
-    "deepseek_v3": "deepseek/deepseek-chat-v3",
-    "qwen": "qwen/qwen-3.6-plus",
-    # Tier F — Free (testing only)
-    "llama_free": "meta-llama/llama-3.3-70b-instruct:free",
-    "gemini_free": "google/gemini-2.0-flash-lite-preview-02-05:free",
-    "nemotron_free": "nvidia/llama-3.1-nemotron-70b-instruct:free",
+    # Tier S — Premium (Rank 1/2 Intel)
+    "engine_s": "google/gemini-3.1-pro-preview",
+    "engine_a": "openai/gpt-5.4-xhigh",
+    # Tier A — Standard (Rank 5/8 Intel)
+    "engine_b": "anthropic/claude-4.6-sonnet",
+    "engine_local": "qwen/qwen-3.6-plus",
+    # Tier B — Budget (Rank 19 Intel / Open Source)
+    "engine_flash": "google/gemini-3-flash-preview",
+    "engine_deepseek": "deepseek/deepseek-v3.2",
 }
 
 # For TEST_MODE, override all model selections to free tier
-FREE_MODELS = [MODELS["llama_free"], MODELS["gemini_free"], MODELS["nemotron_free"]]
+FREE_MODELS = []
 
 # ============================================================
 # SYSTEM PROMPTS — Style Instructions (Bagian 5.2)

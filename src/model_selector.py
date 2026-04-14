@@ -23,9 +23,9 @@ def pilih_model(num_turns: int, mapel: str, system_prompt_id: str) -> str:
 
     Returns: OpenRouter model ID string.
     """
-    # TEST MODE: always use free models
+    # TEST MODE: Use deepest Tier B model if running in test (since free models were removed)
     if config.TEST_MODE:
-        return random.choice(FREE_MODELS)
+        return config.MODELS["engine_flash"]
 
     is_stem = config.is_in_category(mapel, STEM_SUBJECTS)
     is_humaniora_inti = config.is_in_category(mapel, HUMANIORA_INTI)
@@ -33,59 +33,58 @@ def pilih_model(num_turns: int, mapel: str, system_prompt_id: str) -> str:
     is_priority_premium = config.is_in_category(mapel, PRIORITY_STEM_PREMIUM)
     is_reasoning_prompt = system_prompt_id in ["SP-06", "SP-09"]
 
-    # RULE 1: 3-Turn + priority premium STEM -> Tier S (Claude)
+    # RULE 1: 3-Turn + priority premium STEM -> Tier S
     if num_turns == 3 and is_priority_premium:
-        return MODELS["claude"]
+        return random.choice([MODELS["engine_s"], MODELS["engine_a"]])
 
-    # RULE 2: 3-Turn + STEM/Humaniora lain ATAU reasoning prompt -> Tier S (DeepSeek R1)
+    # RULE 2: 3-Turn + STEM/Humaniora lain ATAU reasoning prompt -> Tier S
     if num_turns == 3 and (is_stem or is_humaniora_inti or is_reasoning_prompt):
-        return MODELS["deepseek_r1"]
+        return random.choice([MODELS["engine_s"], MODELS["engine_a"]])
 
     # RULE 3: 3-Turn + non-priority -> Tier A
     if num_turns == 3:
-        return random.choice([MODELS["gemini_25_flash"], MODELS["gpt4o_mini"]])
+        return random.choice([MODELS["engine_b"], MODELS["engine_local"]])
 
-    # RULE 4: 2-Turn + Priority Premium -> 85% Chance for Tier S (Premium)
+    # RULE 4: 2-Turn + Priority Premium -> 85% Chance for Tier S
     if num_turns == 2 and is_priority_premium:
         if random.random() < 0.85:
-            return random.choice([MODELS["claude"], MODELS["deepseek_r1"]])
+            return random.choice([MODELS["engine_s"], MODELS["engine_a"]])
         else:
-            return random.choice([MODELS["gpt4o_mini"], MODELS["gemini_25_flash"], MODELS["llama4_maverick"]])
+            return random.choice([MODELS["engine_b"], MODELS["engine_local"]])
 
-    # RULE 4.1: 2-Turn (Non-Priority) -> Tier A (3 model alternation)
+    # RULE 4.1: 2-Turn (Non-Priority) -> Tier A
     if num_turns == 2:
-        return random.choice([
-            MODELS["gpt4o_mini"],
-            MODELS["gemini_25_flash"],
-            MODELS["llama4_maverick"],
-        ])
+        return random.choice([MODELS["engine_b"], MODELS["engine_local"]])
 
-    # RULE 4.5: 1-Turn + Priority Premium -> 85% Chance for Tier S (Premium)
+    # RULE 4.5: 1-Turn + Priority Premium -> 85% Chance for Tier S
     if num_turns == 1 and is_priority_premium:
         if random.random() < 0.85:
             # 85% chance to use premium models
-            return random.choice([MODELS["claude"], MODELS["deepseek_r1"]])
+            return random.choice([MODELS["engine_s"], MODELS["engine_a"]])
         else:
             # 15% fallback to high-end Tier A
-            return random.choice([MODELS["gemini_25_flash"], MODELS["llama4_maverick"]])
+            return random.choice([MODELS["engine_b"], MODELS["engine_local"]])
 
-    # RULE 5: 1-Turn + STEM/Humaniora Inti (Non-Priority) -> Tier A
+    # RULE 5: 1-Turn + STEM/Humaniora Inti (Non-Priority) -> Mix Tier A & B
     if num_turns == 1 and (is_stem or is_humaniora_inti):
-        return random.choice([MODELS["gemini_20_flash"], MODELS["gemini_25_flash"]])
+        return random.choice([
+            MODELS["engine_b"], MODELS["engine_local"], 
+            MODELS["engine_flash"], MODELS["engine_deepseek"]
+        ])
 
     # RULE 6: 1-Turn + Bahasa & Sosial -> Tier B
     if num_turns == 1 and is_bahasa_sosial:
-        return MODELS["gemini_20_flash"]
+        return random.choice([MODELS["engine_flash"], MODELS["engine_deepseek"]])
 
     # RULE 7: 1-Turn + lainnya -> Tier B (cheapest)
-    return random.choice([MODELS["gemini_20_flash"], MODELS["deepseek_v3"]])
+    return random.choice([MODELS["engine_flash"], MODELS["engine_deepseek"]])
 
 
 def get_model_tier(model_id: str) -> str:
     """Return the tier label for a given model ID."""
-    tier_s = [MODELS["claude"], MODELS["deepseek_r1"]]
-    tier_a = [MODELS["gemini_25_flash"], MODELS["gpt4o_mini"], MODELS["llama4_maverick"]]
-    tier_b = [MODELS["gemini_20_flash"], MODELS["deepseek_v3"], MODELS["qwen"]]
+    tier_s = [MODELS["engine_s"], MODELS["engine_a"]]
+    tier_a = [MODELS["engine_b"], MODELS["engine_local"]]
+    tier_b = [MODELS["engine_flash"], MODELS["engine_deepseek"]]
 
     if model_id in tier_s:
         return "S"
@@ -93,8 +92,6 @@ def get_model_tier(model_id: str) -> str:
         return "A"
     elif model_id in tier_b:
         return "B"
-    elif model_id in FREE_MODELS:
-        return "F"
     return "?"
 
 
