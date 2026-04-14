@@ -214,17 +214,19 @@ SYSTEM_PROMPTS = {
 }
 
 # Weights for system prompt selection (Bagian 5.3)
+# NOTE: Biased toward long/detailed explanations for richer SFT data.
+#       SP-03 (Singkat) and SP-10 (Rangkuman) kept minimal.
 SP_WEIGHTS = {
-    "SP-01": 15,
-    "SP-02": 15,
-    "SP-03": 12,
-    "SP-04": 12,
-    "SP-05": 10,
-    "SP-06": 10,
-    "SP-07": 8,
-    "SP-08": 8,
-    "SP-09": 5,
-    "SP-10": 5,
+    "SP-01": 15,   # Default STEM
+    "SP-02": 15,   # Default Humaniora
+    "SP-03": 3,    # Penjelasan Singkat (↓ dari 12)
+    "SP-04": 10,   # Penjelasan Sederhana
+    "SP-05": 18,   # Penjelasan Panjang dan Mendetail (↑ dari 10)
+    "SP-06": 14,   # Step-by-Step Reasoning (↑ dari 10)
+    "SP-07": 12,   # Analogi dan Contoh Nyata (↑ dari 8)
+    "SP-08": 8,    # Perbandingan Antar Konsep
+    "SP-09": 5,    # Gaya Tanya-Jawab Socrates
+    "SP-10": 2,    # Rangkuman dan Poin Penting (↓ dari 5)
 }
 
 # Style instructions for user prompt (Bagian 8.3)
