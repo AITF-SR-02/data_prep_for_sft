@@ -134,26 +134,30 @@ def determine_num_turns() -> int:
 # OUTPUT VALIDATION (Bagian 10.2)
 # ============================================================
 def validate_output(response_text: str) -> bool:
-    """Check if API response contains valid Siswa/Guru format."""
+    """Check if API response contains valid Siswa/Guru or Siswa/Ahli Konten Belajar format."""
     if not response_text or not response_text.strip():
         return False
     has_siswa = bool(re.search(r"Siswa\s*:", response_text, re.IGNORECASE))
     has_guru = bool(re.search(r"Guru\s*:", response_text, re.IGNORECASE))
-    return has_siswa and has_guru
+    has_ahli = bool(re.search(r"Ahli Konten Belajar\s*:", response_text, re.IGNORECASE))
+    return has_siswa and (has_guru or has_ahli)
 
 
 def parse_conversation(response_text: str, num_turns: int) -> Optional[list[dict]]:
     """
     Parse the API response into OpenAI Messages format.
-    Expected format: Siswa: "..." / Guru: "..."
+    Expected format: Siswa: "..." / Guru: "..." OR Siswa: "..." / Ahli Konten Belajar: "..."
 
     Returns list of {role, content} dicts, or None if parsing fails.
     """
     messages = []
 
-    # Split by Siswa:/Guru: markers
-    # Pattern matches "Siswa:" or "Guru:" at the start of a line or after newlines
-    parts = re.split(r"\n*(?=(?:Siswa|Guru)\s*:)", response_text.strip())
+    # Split by Siswa:/Guru:/Ahli Konten Belajar: markers
+    # Pattern matches these markers at the start of a line or after newlines
+    parts = re.split(
+        r"\n*(?=(?:Siswa|Guru|Ahli Konten Belajar)\s*:)",
+        response_text.strip()
+    )
     parts = [p.strip() for p in parts if p.strip()]
 
     for part in parts:
@@ -162,8 +166,11 @@ def parse_conversation(response_text: str, num_turns: int) -> Optional[list[dict
             content = content.strip('"').strip("'").strip()
             if content:
                 messages.append({"role": "user", "content": content})
-        elif re.match(r"^Guru\s*:", part, re.IGNORECASE):
-            content = re.sub(r"^Guru\s*:\s*", "", part, flags=re.IGNORECASE).strip()
+        elif re.match(r"^(?:Guru|Ahli Konten Belajar)\s*:", part, re.IGNORECASE):
+            content = re.sub(
+                r"^(?:Guru|Ahli Konten Belajar)\s*:\s*", "",
+                part, flags=re.IGNORECASE
+            ).strip()
             content = content.strip('"').strip("'").strip()
             if content:
                 messages.append({"role": "assistant", "content": content})

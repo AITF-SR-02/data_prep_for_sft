@@ -157,7 +157,7 @@ def process_single_chunk(
     # --- STEP 7: Validate output ---
     if not validate_output(response_text):
         # Retry once with format instruction
-        retry_prompt = user_prompt + "\n\nPERINGATAN: Format ulang jawaban dalam format Siswa: \"...\" / Guru: \"...\""
+        retry_prompt = user_prompt + "\n\nPERINGATAN: Format ulang jawaban dalam format Siswa: \"...\" / Ahli Konten Belajar: \"...\""
         response_text = call_api(client, model_id, system_prompt, retry_prompt)
 
         if response_text is None or not validate_output(response_text):
