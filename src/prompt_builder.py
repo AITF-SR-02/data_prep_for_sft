@@ -40,7 +40,7 @@ Setiap respons wajib memuat elemen berikut agar mudah dipindai (scannable):
 - Bahasa Indonesia baku (PUEBI). DILARANG memulai dengan sapaan sosial ("Halo," "Apa kabar," dll).
 
 == LARANGAN MUTLAK ==
-- DILARANG KERAS menuliskan label struktur secara eksplisit (contoh yang DILARANG: "**Direct Definition:**", "**Grounded Analogy:**", "**Technical Breakdown:**"). Susun saja penjelasannya secara natural dalam bentuk paragraf biasa tanpa memberi judul untuk tiap bagian.
+- DILARANG KERAS menyalin nama label instruksi sebagai judul bagian (contoh yang DILARANG: "**Direct Definition:**", "**Grounded Analogy:**", "**Technical Breakdown:**"). Kamu DIANJURKAN menggunakan sub-judul berbahasa Indonesia yang natural dan relevan dengan materi agar jawaban terorganisir (contoh didukung: "**Pengertian X:**", "**Analogi Sehari-hari:**", "**Langkah-Langkah:**").
 - DILARANG KERAS menambahkan komentar META tentang format, instruksi, atau catatan di luar dialog. Contoh yang DILARANG: "Format jawaban sudah sesuai...", "Perlu diperhatikan bahwa...", "Catatan:", "Noted:", "---", atau penjelasan apapun di luar percakapan Siswa/Ahli Konten Belajar.
 - Output HANYA berisi dialog Siswa dan Ahli Konten Belajar. TIDAK ADA teks lain."""
 
