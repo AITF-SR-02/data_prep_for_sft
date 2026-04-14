@@ -8,6 +8,7 @@ Usage:
     uv run python main.py --batch-size 20    # Custom batch size
     uv run python main.py --resume           # Resume from last progress
     uv run python main.py --test-chunks 5    # Test with N chunks
+    uv run python main.py --production --multi-turn-only  # Re-generate 1-turn chunks as 2/3-turn
 """
 import argparse
 import json
@@ -37,6 +38,7 @@ from utils import (
     save_progress,
     get_batch_filename,
     write_batch,
+    get_single_turn_chunk_ids,
 )
 
 
@@ -46,6 +48,8 @@ def parse_args():
     parser.add_argument("--batch-size", type=int, default=None, help=f"Chunks per batch (default: {BATCH_SIZE})")
     parser.add_argument("--resume", action="store_true", help="Resume from last saved progress")
     parser.add_argument("--test-chunks", type=int, default=10, help="Number of chunks for test mode (default: 10)")
+    parser.add_argument("--multi-turn-only", action="store_true",
+                        help="Re-generate chunks that only have 1-turn data as 2/3-turn")
     return parser.parse_args()
 
 
@@ -170,6 +174,25 @@ def main():
                 break
 
     chunks_to_process = ordered_chunks[start_idx:]
+
+    # --- MULTI-TURN-ONLY MODE: filter to 1-turn-only chunks ---
+    if args.multi_turn_only:
+        single_turn_ids = get_single_turn_chunk_ids(LOG_FILE)
+        if not single_turn_ids:
+            print("[WARN] No single-turn-only chunks found in log. Nothing to re-generate.")
+            return
+        chunks_to_process = [
+            c for c in chunks_to_process
+            if c.get("_chunk_id", -1) in single_turn_ids
+        ]
+        print(f"[MULTI-TURN] Found {len(single_turn_ids)} chunks with 1-turn only. Processing {len(chunks_to_process)} of them.")
+
+        # Override determine_num_turns to only return 2 or 3
+        import utils
+        import random as _rng
+        def _multi_turn_only():
+            return 2 if _rng.random() < 0.50 else 3
+        utils.determine_num_turns = _multi_turn_only
 
     with tqdm(total=len(chunks_to_process), desc="Generating SFT", unit="chunk") as pbar:
         for chunk in chunks_to_process:

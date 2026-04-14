@@ -119,15 +119,17 @@ def get_processing_order(all_chunks: list[dict], tier_order: dict) -> list[dict]
 # TURN DISTRIBUTION (Bagian 6.2)
 # ============================================================
 def determine_num_turns() -> int:
-    """50% -> 1-turn, 25% -> 2-turn, 25% -> 3-turn."""
-    import random
-    r = random.random()
-    if r < 0.50:
-        return 1
-    elif r < 0.75:
-        return 2
-    else:
-        return 3
+    """1-turn only. (2-turn and 3-turn disabled for deadline)"""
+    return 1
+    # NOTE: Multi-turn disabled to save time/cost. Uncomment below to re-enable.
+    # import random
+    # r = random.random()
+    # if r < 0.50:
+    #     return 1
+    # elif r < 0.75:
+    #     return 2
+    # else:
+    #     return 3
 
 
 # ============================================================
@@ -272,6 +274,45 @@ def log_entry(
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
+def get_single_turn_chunk_ids(log_file: str = None) -> set[int]:
+    """
+    Read the generation log and return chunk_ids that were successfully
+    processed as 1-turn ONLY (no successful 2/3-turn entries exist).
+    Used by --multi-turn-only to avoid redundant data.
+    """
+    if log_file is None:
+        log_file = LOG_FILE
+
+    if not os.path.exists(log_file):
+        return set()
+
+    # Track successful entries per chunk: {chunk_id: set of turn counts}
+    success_turns = {}
+    with open(log_file, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+                if entry.get("status") == "success":
+                    cid = entry["chunk_id"]
+                    turns = entry.get("turns", 0)
+                    if cid not in success_turns:
+                        success_turns[cid] = set()
+                    success_turns[cid].add(turns)
+            except json.JSONDecodeError:
+                continue
+
+    # Return only chunks that have 1-turn success but NO 2 or 3-turn success
+    single_turn_only = set()
+    for cid, turns_set in success_turns.items():
+        if turns_set == {1}:
+            single_turn_only.add(cid)
+
+    return single_turn_only
 
 
 # ============================================================
