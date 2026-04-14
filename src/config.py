@@ -96,7 +96,7 @@ MODELS = {
     "engine_a": "openai/gpt-5.4",
     # Tier A — Standard (Rank 5/8 Intel)
     "engine_b": "anthropic/claude-4.6-sonnet",
-    "engine_local": "qwen/qwen-3.6-plus",
+    "engine_local": "qwen/qwen3.6-plus",
     # Tier B — Budget (Rank 19 Intel / Open Source)
     "engine_flash": "google/gemini-3-flash-preview",
     "engine_deepseek": "deepseek/deepseek-v3.2",
