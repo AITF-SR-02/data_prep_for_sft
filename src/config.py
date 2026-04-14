@@ -93,7 +93,7 @@ TFIDF_SIMILARITY_THRESHOLD = 0.15
 MODELS = {
     # Tier S — Premium (Rank 1/2 Intel)
     "engine_s": "google/gemini-3.1-pro-preview",
-    "engine_a": "openai/gpt-5.4-xhigh",
+    "engine_a": "openai/gpt-5.4",
     # Tier A — Standard (Rank 5/8 Intel)
     "engine_b": "anthropic/claude-4.6-sonnet",
     "engine_local": "qwen/qwen-3.6-plus",
