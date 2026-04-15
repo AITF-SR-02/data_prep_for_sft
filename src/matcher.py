@@ -4,22 +4,21 @@ Mengikuti PRD v2.1, Bagian 3.3 (Algoritma Matching Baru).
 
 Layer 1: Exact Keyword Match
 Layer 2: Fuzzy Keyword Match (rapidfuzz)
-Layer 3: TF-IDF Cosine Similarity (scikit-learn)
+Layer 3: Okapi BM25 (Pengganti TF-IDF)
 """
 import json
 import os
 from typing import Optional
 
+from rank_bm25 import BM25Okapi
 from rapidfuzz import fuzz
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
 from config import (
     MAPPING_FILES,
     EXACT_MATCH_MIN_KEYWORDS,
     FUZZY_MATCH_THRESHOLD,
     FUZZY_MATCH_MIN_KEYWORDS,
-    TFIDF_SIMILARITY_THRESHOLD,
+    # TFIDF_SIMILARITY_THRESHOLD, # -> Dihapus karena kita menggunakan BM25 dengan threshold statis
 )
 
 
@@ -44,7 +43,7 @@ class MatchResult:
         self.bab_nomor = bab_nomor
         self.sub_bab = sub_bab
         self.keywords = keywords or []
-        self.layer = layer   # "exact", "fuzzy", "tfidf", "none"
+        self.layer = layer   # "exact", "fuzzy", "bm25", "none"
         self.score = score
 
     def to_dict(self):
@@ -224,39 +223,43 @@ def _fuzzy_match(chunk_text: str, mapping: list[dict]) -> Optional[MatchResult]:
 
 
 # ============================================================
-# LAYER 3: TF-IDF COSINE SIMILARITY
+# LAYER 3: BM25 OKAPI MATCHING
 # ============================================================
-def _tfidf_match(chunk_text: str, mapping: list[dict]) -> Optional[MatchResult]:
+def _bm25_match(chunk_text: str, mapping: list[dict]) -> Optional[MatchResult]:
     """
-    Layer 3: TF-IDF cosine similarity as semantic fallback.
-    - Build corpus: chunk_text + concatenated (keywords + bab_judul + sub_bab) per entry.
-    - Compute cosine similarity.
-    - Need >= TFIDF_SIMILARITY_THRESHOLD.
+    Layer 3: Menggunakan BM25 sebagai pengganti TF-IDF yang jauh lebih akurat
+    namun sama ringannya secara komputasi.
     """
     if not mapping:
         return None
 
-    # Build corpus: [chunk_text, entry_0_text, entry_1_text, ...]
-    corpus = [chunk_text.lower()]
+    # Tokenisasi sederhana (lowercase & split by space)
+    tokenized_chunk = chunk_text.lower().split()
+
+    corpus_tokens = []
     for entry in mapping:
+        # Gabungkan konteks menjadi satu string, lalu tokenisasi
         entry_text = " ".join([
             entry.get("bab_judul", ""),
             entry.get("sub_bab", ""),
             " ".join(entry.get("keywords", [])),
         ]).lower()
-        corpus.append(entry_text)
+        corpus_tokens.append(entry_text.split())
 
     try:
-        vectorizer = TfidfVectorizer(max_features=5000)
-        tfidf_matrix = vectorizer.fit_transform(corpus)
+        # Inisialisasi BM25
+        bm25 = BM25Okapi(corpus_tokens)
 
-        # Compute similarity between chunk (index 0) and all entries
-        similarities = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:]).flatten()
+        # Hitung skor kemiripan antara chunk dan corpus mapping
+        scores = bm25.get_scores(tokenized_chunk)
 
-        best_idx = similarities.argmax()
-        best_score = similarities[best_idx]
+        # Cari skor tertinggi
+        best_idx = max(range(len(scores)), key=scores.__getitem__)
+        best_score = scores[best_idx]
 
-        if best_score >= TFIDF_SIMILARITY_THRESHOLD:
+        # Skor threshold BM25. Nilai 1.5 biasanya cukup aman untuk dokumen pendidikan.
+        # Bisa diturunkan ke 1.0 jika dirasa terlalu ketat.
+        if best_score >= 1.5:
             best_entry = mapping[best_idx]
             return MatchResult(
                 matched=True,
@@ -264,11 +267,11 @@ def _tfidf_match(chunk_text: str, mapping: list[dict]) -> Optional[MatchResult]:
                 bab_nomor=best_entry.get("bab_nomor", 0),
                 sub_bab=best_entry.get("sub_bab", ""),
                 keywords=best_entry.get("keywords", []),
-                layer="tfidf",
+                layer="bm25",
                 score=round(float(best_score), 4),
             )
     except Exception as e:
-        print(f"[WARN] TF-IDF matching failed: {e}")
+        print(f"[WARN] BM25 matching failed: {e}")
 
     return None
 
@@ -315,8 +318,8 @@ def match_chunk(
     if result:
         return result
 
-    # Layer 3: TF-IDF
-    result = _tfidf_match(chunk_text, filtered)
+    # Layer 3: BM25 Okapi
+    result = _bm25_match(chunk_text, filtered)
     if result:
         return result
 

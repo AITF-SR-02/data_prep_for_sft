@@ -1,6 +1,7 @@
 """
 generator.py - Core SFT generation logic.
 Mengikuti PRD v2.1: read chunk -> match -> build prompt -> call API -> parse -> save.
+(Diperbarui untuk Structured Output / JSON Mode)
 """
 import json
 import os
@@ -8,10 +9,11 @@ from typing import Optional
 
 from openai import OpenAI
 
+import config
+
 from config import (
     OPENROUTER_API_KEY,
     OPENROUTER_BASE_URL,
-    TEST_MODE,
 )
 from matcher import MatchResult, match_chunk
 from prompt_builder import (
@@ -23,8 +25,6 @@ from model_selector import pilih_model, get_model_tier
 from utils import (
     extract_chunk_text,
     extract_metadata,
-    validate_output,
-    parse_conversation,
     retry_with_backoff,
     log_entry,
     determine_num_turns,
@@ -47,14 +47,14 @@ def create_client() -> OpenAI:
     )
 
 
-def call_api(
+def call_api_json(
     client: OpenAI,
     model_id: str,
     system_prompt: str,
     user_prompt: str,
-) -> Optional[str]:
+) -> Optional[dict]:
     """
-    Call OpenRouter API and return the response text.
+    Call OpenRouter API and force JSON output.
     Uses retry_with_backoff for rate limiting.
     """
     def _make_call():
@@ -64,13 +64,20 @@ def call_api(
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.7,
+            temperature=0.6, # Sedikit diturunkan agar format JSON lebih stabil
             max_tokens=4096,
+            response_format={"type": "json_object"} # Memaksa output berupa JSON
         )
         return response.choices[0].message.content
 
     try:
-        return retry_with_backoff(_make_call)
+        raw_output = retry_with_backoff(_make_call)
+        if raw_output:
+            return json.loads(raw_output) # Langsung parse ke Dictionary Python
+        return None
+    except json.JSONDecodeError:
+        print("[ERROR] Output dari API bukan JSON yang valid.")
+        return None
     except Exception as e:
         print(f"[ERROR] API call failed after retries: {e}")
         return None
@@ -91,9 +98,8 @@ def process_single_chunk(
     2. Match to curriculum (if Merdeka)
     3. Select system prompt + turns + model
     4. Build prompts
-    5. Call API
-    6. Parse and validate output
-    7. Return SFT entry or None
+    5. Call API (JSON Mode)
+    6. Extract dialog & Build final SFT entry
 
     Returns: dict in OpenAI Messages format with metadata, or None on failure.
     """
@@ -143,35 +149,25 @@ def process_single_chunk(
         teks_referensi=chunk_text,
     )
 
-    # --- STEP 6: Call API ---
+    # --- STEP 6: Call API (JSON Mode) ---
     tier = get_model_tier(model_id)
-    if TEST_MODE:
+    if config.TEST_MODE:
         print(f"  [TEST] chunk={chunk_id} | sp={sp_id} | turns={num_turns} | model={model_id} (Tier {tier})")
 
-    response_text = call_api(client, model_id, system_prompt, user_prompt)
+    parsed_json = call_api_json(client, model_id, system_prompt, user_prompt)
 
-    if response_text is None:
-        log_entry(chunk_id, "failed", "api_error", model_id, sp_id, num_turns)
+    # --- STEP 7: Validate JSON Output ---
+    if parsed_json is None:
+        log_entry(chunk_id, "failed", "api_or_json_error", model_id, sp_id, num_turns)
         return None
 
-    # --- STEP 7: Validate output ---
-    if not validate_output(response_text):
-        # Retry once with format instruction
-        retry_prompt = user_prompt + "\n\nPERINGATAN: Format ulang jawaban dalam format Siswa: \"...\" / Ahli Konten Belajar: \"...\""
-        response_text = call_api(client, model_id, system_prompt, retry_prompt)
-
-        if response_text is None or not validate_output(response_text):
-            log_entry(chunk_id, "failed", "invalid_output", model_id, sp_id, num_turns)
-            return None
-
-    # --- STEP 8: Parse conversation ---
-    conversation = parse_conversation(response_text, num_turns)
-
-    if conversation is None:
-        log_entry(chunk_id, "failed", "parse_error", model_id, sp_id, num_turns)
+    # Pastikan key "dialog" ada dan berupa list (Sesuai skema di prompt_builder.py)
+    conversation = parsed_json.get("dialog")
+    if not conversation or not isinstance(conversation, list):
+        log_entry(chunk_id, "failed", "invalid_json_schema", model_id, sp_id, num_turns)
         return None
 
-    # --- STEP 9: Build final SFT entry ---
+    # --- STEP 8: Build final SFT entry ---
     messages = [{"role": "system", "content": system_prompt}] + conversation
 
     sft_entry = {

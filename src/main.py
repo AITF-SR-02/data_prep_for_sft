@@ -5,6 +5,7 @@ Mengikuti PRD v2.1, Bagian 11 (Instruksi untuk Pelaksana).
 Usage:
     uv run python main.py                    # Test mode (10 chunks, free models)
     uv run python main.py --production       # Production mode (all chunks)
+    uv run python main.py --test             # Force test mode (free models only)
     uv run python main.py --batch-size 20    # Custom batch size
     uv run python main.py --resume           # Resume from last progress
     uv run python main.py --test-chunks 5    # Test with N chunks
@@ -13,12 +14,13 @@ Usage:
 import argparse
 import json
 import os
-import sys
 from collections import Counter
 from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from tqdm import tqdm
 
+import config
 from config import (
     GOLD_DATASET_PATH,
     OUTPUT_DIR,
@@ -26,7 +28,6 @@ from config import (
     REPORT_FILE,
     PROGRESS_FILE,
     BATCH_SIZE,
-    TEST_MODE,
 )
 from matcher import load_master_mapping
 from generator import create_client, process_single_chunk
@@ -44,7 +45,11 @@ from utils import (
 
 def parse_args():
     parser = argparse.ArgumentParser(description="SFT Data Generator - Sekolah Rakyat")
-    parser.add_argument("--production", action="store_true", help="Run in production mode (overrides TEST_MODE)")
+
+    mode_group = parser.add_mutually_exclusive_group()
+    mode_group.add_argument("--production", action="store_true", help="Run in production mode (paid models)")
+    mode_group.add_argument("--test", action="store_true", help="Force test mode (free models only)")
+
     parser.add_argument("--batch-size", type=int, default=None, help=f"Chunks per batch (default: {BATCH_SIZE})")
     parser.add_argument("--resume", action="store_true", help="Resume from last saved progress")
     parser.add_argument("--test-chunks", type=int, default=10, help="Number of chunks for test mode (default: 10)")
@@ -117,13 +122,18 @@ def main():
     is_production = args.production
     batch_size = args.batch_size or BATCH_SIZE
 
-    if is_production:
-        # Override TEST_MODE in config
-        import config
+    if args.production:
         config.TEST_MODE = False
+        is_production = True
         print("[MODE] PRODUCTION - using paid models")
-    elif TEST_MODE:
+    elif args.test:
+        config.TEST_MODE = True
+        is_production = False
+        print("[MODE] TEST - forced by --test (free models only)")
+    elif config.TEST_MODE:
         print("[MODE] TEST - using free models only")
+    else:
+        print("[MODE] DEFAULT - paid models allowed (use --test to force free)")
 
     # Ensure output directory exists
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -140,7 +150,7 @@ def main():
     ordered_chunks = get_processing_order(all_chunks, {})
 
     # In test mode, limit to test_chunks
-    if not is_production and TEST_MODE:
+    if not is_production and config.TEST_MODE:
         ordered_chunks = ordered_chunks[: args.test_chunks]
         print(f"[TEST] Limited to {len(ordered_chunks)} chunks")
 
@@ -151,21 +161,6 @@ def main():
         print(f"[RESUME] Resuming from chunk_id={progress['last_chunk_id']}, "
               f"processed={progress['processed_count']}, batch={progress['batch_number']}")
 
-    # --- STEP 4: Create API client ---
-    print("\n[STEP 3] Creating API client...")
-    client = create_client()
-
-    # --- STEP 5: Process chunks in batches ---
-    print(f"\n[STEP 4] Processing {len(ordered_chunks)} chunks in batches of {batch_size}...")
-    batch_number = progress["batch_number"]
-    processed_count = progress["processed_count"]
-    current_batch = []
-    last_chunk_id = progress["last_chunk_id"]
-
-    # Track stats
-    stats = {"success": 0, "failed": 0, "skipped": 0}
-
-    # Filter out already-processed chunks if resuming
     start_idx = 0
     if args.resume and progress["last_chunk_id"] >= 0:
         for i, chunk in enumerate(ordered_chunks):
@@ -194,46 +189,68 @@ def main():
             return 2 if _rng.random() < 0.50 else 3
         utils.determine_num_turns = _multi_turn_only
 
+    # --- STEP 4: Create API client ---
+    print("\n[STEP 3] Creating API client...")
+    client = create_client()
+
+    # --- STEP 5: Process chunks CONCURRENTLY ---
+    print(f"\n[STEP 4] Processing {len(chunks_to_process)} chunks CONCURRENTLY (Batch: {batch_size})...")
+    
+    batch_number = progress["batch_number"]
+    processed_count = progress["processed_count"]
+    last_chunk_id = progress["last_chunk_id"]
+    
+    # Track stats
+    stats = {"success": 0, "failed": 0, "skipped": 0}
+    
+    # Setup Concurrency
+    max_workers = 10 # Sesuaikan dengan rate limit API OpenRouter Anda
+    current_batch = []
+    
     with tqdm(total=len(chunks_to_process), desc="Generating SFT", unit="chunk") as pbar:
-        for chunk in chunks_to_process:
-            chunk_id = chunk.get("_chunk_id", -1)
-            last_chunk_id = chunk_id
-            meta = extract_metadata(chunk)
-            kurikulum = meta.get("kurikulum", "")
-            is_merdeka = "merdeka" in kurikulum.lower()
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit semua task
+            futures = {
+                executor.submit(
+                    process_single_chunk, 
+                    chunk, 
+                    mapping, 
+                    client, 
+                    "merdeka" in extract_metadata(chunk).get("kurikulum", "").lower()
+                ): chunk
+                for chunk in chunks_to_process
+            }
+            
+            for future in as_completed(futures):
+                chunk = futures[future] # Ambil referensi chunk asli jika butuh ID-nya
+                chunk_id = chunk.get("_chunk_id", -1)
+                
+                try:
+                    sft_entry = future.result()
+                    if sft_entry:
+                        current_batch.append(sft_entry)
+                        stats["success"] += 1
+                    else:
+                        stats["failed"] += 1
+                except Exception as exc:
+                    print(f"[ERROR] Chunk {chunk_id} generated an exception: {exc}")
+                    stats["failed"] += 1
+                    
+                processed_count += 1
+                last_chunk_id = chunk_id 
+                
+                # Write batch when full
+                if len(current_batch) >= batch_size:
+                    batch_number += 1
+                    batch_file = get_batch_filename(OUTPUT_DIR, batch_number)
+                    write_batch(batch_file, current_batch)
+                    
+                    # Catat progress terakhir
+                    save_progress(PROGRESS_FILE, last_chunk_id, processed_count, batch_number)
+                    current_batch = []
 
-            # Process the chunk
-            sft_entry = process_single_chunk(
-                chunk=chunk,
-                mapping=mapping,
-                client=client,
-                is_merdeka=is_merdeka,
-            )
-
-            if sft_entry:
-                current_batch.append(sft_entry)
-                stats["success"] += 1
-            else:
-                stats["failed"] += 1
-
-            processed_count += 1
-
-            # Write batch when full
-            if len(current_batch) >= batch_size:
-                batch_number += 1
-                batch_file = get_batch_filename(OUTPUT_DIR, batch_number)
-                write_batch(batch_file, current_batch)
-                current_batch = []
-
-                # Save progress
-                save_progress(PROGRESS_FILE, last_chunk_id, processed_count, batch_number)
-
-            pbar.update(1)
-            pbar.set_postfix(
-                ok=stats["success"],
-                fail=stats["failed"],
-                batch=batch_number,
-            )
+                pbar.update(1)
+                pbar.set_postfix(ok=stats["success"], fail=stats["failed"], batch=batch_number)
 
     # Write remaining entries
     if current_batch:

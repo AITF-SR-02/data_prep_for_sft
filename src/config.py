@@ -52,7 +52,7 @@ BANNED_ELITE_KEYWORDS = [
 # ============================================================
 STEM_SUBJECTS = [
     "matematika", "fisika", "biologi", "kimia", 
-    "informatika", "koding", "kecerdasan artifisial", "komputer"
+    "informatika"
 ]
 
 HUMANIORA_INTI = ["sejarah", "ekonomi", "geografi"]
@@ -103,7 +103,10 @@ MODELS = {
 }
 
 # For TEST_MODE, override all model selections to free tier
-FREE_MODELS = []
+FREE_MODELS = [
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "openai/gpt-oss-20b:free",
+]
 
 # ============================================================
 # SYSTEM PROMPTS — Style Instructions (Bagian 5.2)

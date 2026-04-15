@@ -23,9 +23,12 @@ def pilih_model(num_turns: int, mapel: str, system_prompt_id: str) -> str:
 
     Returns: OpenRouter model ID string.
     """
-    # TEST MODE: Use deepest Tier B model if running in test (since free models were removed)
+    # TEST MODE: Use free-tier models only (deterministic for easier debugging)
     if config.TEST_MODE:
-        return config.MODELS["engine_flash"]
+        if FREE_MODELS:
+            return FREE_MODELS[0]
+        # Fallback (shouldn't happen): if FREE_MODELS isn't configured.
+        return MODELS["engine_flash"]
 
     is_stem = config.is_in_category(mapel, STEM_SUBJECTS)
     is_humaniora_inti = config.is_in_category(mapel, HUMANIORA_INTI)
@@ -82,6 +85,9 @@ def pilih_model(num_turns: int, mapel: str, system_prompt_id: str) -> str:
 
 def get_model_tier(model_id: str) -> str:
     """Return the tier label for a given model ID."""
+    if model_id in FREE_MODELS or (isinstance(model_id, str) and model_id.endswith(":free")):
+        return "FREE"
+
     tier_s = [MODELS["engine_s"], MODELS["engine_a"]]
     tier_a = [MODELS["engine_b"], MODELS["engine_local"]]
     tier_b = [MODELS["engine_flash"], MODELS["engine_deepseek"]]

@@ -232,8 +232,13 @@ def retry_with_backoff(func, *args, max_retries: int = None, **kwargs):
             last_error = e
             error_str = str(e)
 
+            # Fast-fail for 403 (Limit exceeded), 401 (Unauthorized) or quota errors
+            if "403" in error_str or "401" in error_str or "quota" in error_str.lower():
+                print(f"[FATAL] API Key Limit Exceeded or Unauthorized: {error_str[:150]}")
+                raise e # Fail immediately; no need to retry
+
             # Check if rate limited (429)
-            if "429" in error_str or "rate" in error_str.lower():
+            elif "429" in error_str or "rate" in error_str.lower():
                 wait_time = min(2 ** attempt * 1.0, 60.0)
                 print(f"[RETRY {attempt + 1}/{max_retries}] Rate limited. Waiting {wait_time:.1f}s...")
                 time.sleep(wait_time)
