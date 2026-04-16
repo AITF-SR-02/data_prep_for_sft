@@ -108,6 +108,9 @@ FREE_MODELS = [
     "openai/gpt-oss-20b:free",
 ]
 
+# --- ROLE DISTRIBUTION SETTINGS ---
+ROLE_RATIO_GURU = 0.3  # 30% Guru, 70% Siswa
+
 # ============================================================
 # SYSTEM PROMPTS — Style Instructions (Bagian 5.2)
 # Ini HANYA bagian "INSTRUKSI GAYA" — P0 di-inject oleh prompt_builder.
