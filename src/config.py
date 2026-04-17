@@ -92,20 +92,21 @@ TFIDF_SIMILARITY_THRESHOLD = 0.15
 # ============================================================
 MODELS = {
     # Tier S — Premium (Rank 1/2 Intel)
-    "engine_s": "google/gemini-3.1-pro-preview",
-    "engine_a": "openai/gpt-5.4",
+    "engine_s": "google/",
+    "engine_a": "openai/",
     # Tier A — Standard (Rank 5/8 Intel)
-    "engine_b": "anthropic/claude-4.6-sonnet",
-    "engine_local": "qwen/qwen3.6-plus",
+    "engine_b": "",
+    "engine_local": "",
     # Tier B — Budget (Rank 19 Intel / Open Source)
-    "engine_flash": "google/gemini-3-flash-preview",
-    "engine_deepseek": "deepseek/deepseek-v3.2",
+    "engine_flash": "",
+    "engine_deepseek": "",
 }
 
 # For TEST_MODE, override all model selections to free tier
+# src/config.py
+
 FREE_MODELS = [
-    "nvidia/nemotron-3-super-120b-a12b:free",
-    "openai/gpt-oss-20b:free",
+    "google/gemma-3n-e2b-it:free"
 ]
 
 # --- ROLE DISTRIBUTION SETTINGS ---
