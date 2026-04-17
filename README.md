@@ -105,8 +105,8 @@ flowchart TD
 
   LocalData --> Run[Run generator<br/>uv run python .\\src\\main.py --test / --production]
   Run --> Mode{Mode?}
-  Mode -- "--test or TEST_MODE=true" --> Free[Force FREE_MODELS<br/>(free-tier only)]
-  Mode -- "--production" --> Paid[Allow MODELS tiers<br/>(paid allowed)]
+  Mode -->|--test or TEST_MODE=true| Free[Force FREE_MODELS<br/>(free-tier only)]
+  Mode -->|--production| Paid[Allow MODELS tiers<br/>(paid allowed)]
 
   Run --> LoadGold[Load gold dataset<br/>data/cpt_dataset/*.jsonl]
   Run --> LoadMap[Load mapping<br/>data/mapping_instruct/*.json]
