@@ -105,8 +105,8 @@ flowchart TD
 
   LocalData --> Run[Run generator<br/>uv run python .\\src\\main.py --test / --production]
   Run --> Mode{Mode?}
-  Mode -->|--test or TEST_MODE=true| Free[Force FREE_MODELS<br/>(free-tier only)]
-  Mode -->|--production| Paid[Allow MODELS tiers<br/>(paid allowed)]
+  Mode -->|--test or TEST_MODE=true| Free[Force FREE_MODELS<br/>free-tier only]
+  Mode -->|--production| Paid[Allow MODELS tiers<br/>paid allowed]
 
   Run --> LoadGold[Load gold dataset<br/>data/cpt_dataset/*.jsonl]
   Run --> LoadMap[Load mapping<br/>data/mapping_instruct/*.json]
@@ -123,9 +123,9 @@ flowchart TD
   Match --> Prompt[Select system prompt + turns]
   NoMatch --> Prompt
 
-  Prompt --> SelectModel[Select model<br/>(Free or Paid)]
-  SelectModel --> Build[Build prompts<br/>(system + user)]
-  Build --> Call[Call OpenRouter API<br/>(JSON mode)]
+  Prompt --> SelectModel[Select model<br/>Free or Paid]
+  SelectModel --> Build[Build prompts<br/>system + user]
+  Build --> Call[Call OpenRouter API<br/>JSON mode]
   Call --> Valid{Valid JSON schema?}
 
   Valid -- Yes --> SFT[Build SFT entry<br/>messages + metadata]
